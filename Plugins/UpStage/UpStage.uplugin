@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "UpStage",
+	"Description": "Stage Simulation for Previz",
+	"Category": "Other",
+	"CreatedBy": "Abhishta Adyatma",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "UpStage",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
