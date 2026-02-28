@@ -26,6 +26,10 @@ public class UpStage : ModuleRules
 			new string[]
 			{
 				"Core",
+                "AnimationModifiers",
+				"AnimationBlueprintLibrary",
+				"CoreUObject",
+				"Engine",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -38,6 +42,8 @@ public class UpStage : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"AnimationModifiers",
+				"AnimationBlueprintLibrary",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
