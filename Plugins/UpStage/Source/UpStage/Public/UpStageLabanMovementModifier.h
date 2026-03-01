@@ -7,7 +7,10 @@
 #include "UpStageLabanMovementAnalysisType.h"
 #include "UpStageJointData.h"
 #include "UpStageJointDynamics.h"
+#include "UpStagePerformerCalibrationAsset.h"
+#include "UpStageMathFunctions.h"
 #include "UpStageLabanMovementModifier.generated.h"
+
 
 /**
  * 
@@ -29,6 +32,18 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Settings")
 	int32 ShortTimeWindowSize = 9;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|Calibration")
+	bool bCalibrate = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|Calibration", meta = (EditCondition = "bCalibrate"))
+	TObjectPtr<UUpStagePerformerCalibrationAsset> CalibrationAsset;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|Calibration", meta = (EditCondition = "bCalibrate"))
+	float CalibrationHeadroom = 3.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Settings|Calibration|Debug", meta = (EditCondition = "bCalibrate"))
+	bool bDebugNormalize = false;
 	
 	virtual void OnApply_Implementation(UAnimSequence* AnimationSequence) override;
 	virtual void OnRevert_Implementation(UAnimSequence* AnimationSequence) override;
