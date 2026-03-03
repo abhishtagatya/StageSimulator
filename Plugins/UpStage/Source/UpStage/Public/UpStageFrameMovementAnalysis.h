@@ -11,12 +11,10 @@ struct UPSTAGE_API FUpStageFrameMovementAnalysis
 {
 	GENERATED_BODY()
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Laban Effort")
-	EUpStageLabanEffortAction EffortAction;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Laban Effort")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effort")
 	float EffortSpace;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Laban Effort")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effort")
 	float EffortWeight;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Laban Effort")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effort")
 	float EffortTime;
 };

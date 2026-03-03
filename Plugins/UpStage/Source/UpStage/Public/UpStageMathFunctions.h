@@ -23,6 +23,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Math")
 	static float InverseRatio(const float X);
 
-	UFUNCTION(BlueprintCallable, Category = "UpStage|Selection")
-	static EUpStageLabanEffortAction SelectEffortAction(FUpStageFrameMovementAnalysis FrameMovementAnalysis, FVector2D Threshold);
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Math")
+	static float ClampedInverseRatio(const float X, const float Min = 0.f, const float Max = 1.f);
 };

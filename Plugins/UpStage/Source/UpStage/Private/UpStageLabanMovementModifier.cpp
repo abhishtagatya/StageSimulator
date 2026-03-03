@@ -65,6 +65,7 @@ void UUpStageLabanMovementModifier::OnApply_Implementation(UAnimSequence* Animat
 
 	float TotalWeight = 0.f;
 	float TotalTime = 0.f;
+	float TotalSpace = 0.f;
 
 	// TODO: Fix the missing end frame data due to temporal window. Potential solution: Mirror the last valid value for the remaining frames / get average.
 	for (int i = 0; i < Times.Num(); ++i)
@@ -77,6 +78,7 @@ void UUpStageLabanMovementModifier::OnApply_Implementation(UAnimSequence* Animat
 		{
 			TotalWeight += EffortWeight[i];
 			TotalTime += EffortTime[i];
+			TotalSpace += EffortSpace[i];
 		}
 	}
 
@@ -84,18 +86,22 @@ void UUpStageLabanMovementModifier::OnApply_Implementation(UAnimSequence* Animat
 	{
 		float AverageWeight = TotalWeight / Times.Num();
 		float AverageTime = TotalTime / Times.Num();
+		float AverageSpace = TotalSpace / Times.Num();
+		
+		if (bAsCalibrationBaseline) {
+			CalibrationAsset->BaselineAnimation = AnimationSequence;
+			CalibrationAsset->SpaceSensitivity = AverageSpace * CalibrationHeadroom;
+			CalibrationAsset->WeightSensitivity = AverageWeight * CalibrationHeadroom;
+			CalibrationAsset->TimeSensitivity = AverageTime * CalibrationHeadroom;
 
-		CalibrationAsset->BaselineAnimation = AnimationSequence;
-		CalibrationAsset->WeightSensitivity = AverageWeight * CalibrationHeadroom;
-		CalibrationAsset->TimeSensitivity = AverageTime * CalibrationHeadroom;
+			CalibrationAsset->MarkPackageDirty();
+		}
 
-		CalibrationAsset->MarkPackageDirty();
-
-		if (bDebugNormalize)
+		if (bCreateNormalizeCurve)
 		{
-			FName DNEffortSpaceCurveName = TEXT("DebugNormalizedLabanEffortSpace");
-			FName DNEffortWeightCurveName = TEXT("DebugNormalizedLabanEffortWeight");
-			FName DNEffortTimeCurveName = TEXT("DebugNormalizedLabanEffortTime");
+			FName DNEffortSpaceCurveName = TEXT("NormalizedLabanEffortSpace");
+			FName DNEffortWeightCurveName = TEXT("NormalizedLabanEffortWeight");
+			FName DNEffortTimeCurveName = TEXT("NormalizedLabanEffortTime");
 
 			UAnimationBlueprintLibrary::AddCurve(AnimationSequence, DNEffortSpaceCurveName, ERawCurveTrackTypes::RCT_Float);
 			UAnimationBlueprintLibrary::AddCurve(AnimationSequence, DNEffortWeightCurveName, ERawCurveTrackTypes::RCT_Float);
@@ -103,7 +109,7 @@ void UUpStageLabanMovementModifier::OnApply_Implementation(UAnimSequence* Animat
 
 			for (int i = 0; i < Times.Num(); ++i)
 			{
-				UAnimationBlueprintLibrary::AddFloatCurveKey(AnimationSequence, DNEffortSpaceCurveName, Times[i], UUpStageMathFunctions::InverseRatio(EffortSpace[i]));
+				UAnimationBlueprintLibrary::AddFloatCurveKey(AnimationSequence, DNEffortSpaceCurveName, Times[i], UUpStageMathFunctions::Normalize(EffortSpace[i], CalibrationAsset->SpaceSensitivity));
 				UAnimationBlueprintLibrary::AddFloatCurveKey(AnimationSequence, DNEffortWeightCurveName, Times[i], UUpStageMathFunctions::Normalize(EffortWeight[i], CalibrationAsset->WeightSensitivity));
 				UAnimationBlueprintLibrary::AddFloatCurveKey(AnimationSequence, DNEffortTimeCurveName, Times[i], UUpStageMathFunctions::Normalize(EffortTime[i], CalibrationAsset->TimeSensitivity));
 			}
@@ -128,13 +134,26 @@ void UUpStageLabanMovementModifier::OnRevert_Implementation(UAnimSequence* Anima
 	if (UAnimationBlueprintLibrary::DoesCurveExist(AnimationSequence, EffortTimeCurveName, ERawCurveTrackTypes::RCT_Float))
 		UAnimationBlueprintLibrary::RemoveCurve(AnimationSequence, EffortTimeCurveName);
 
-	if (bCalibrate && CalibrationAsset)
+	if (bCalibrate && bAsCalibrationBaseline && CalibrationAsset)
 	{
 		CalibrationAsset->BaselineAnimation = nullptr;
 		CalibrationAsset->WeightSensitivity = 0.f;
 		CalibrationAsset->TimeSensitivity = 0.f;
 		CalibrationAsset->MarkPackageDirty();
 	}
+
+	FName DNEffortSpaceCurveName = TEXT("NormalizedLabanEffortSpace");
+	FName DNEffortWeightCurveName = TEXT("NormalizedLabanEffortWeight");
+	FName DNEffortTimeCurveName = TEXT("NormalizedLabanEffortTime");
+
+	if (UAnimationBlueprintLibrary::DoesCurveExist(AnimationSequence, DNEffortSpaceCurveName, ERawCurveTrackTypes::RCT_Float))
+		UAnimationBlueprintLibrary::RemoveCurve(AnimationSequence, DNEffortSpaceCurveName);
+
+	if (UAnimationBlueprintLibrary::DoesCurveExist(AnimationSequence, DNEffortWeightCurveName, ERawCurveTrackTypes::RCT_Float))
+		UAnimationBlueprintLibrary::RemoveCurve(AnimationSequence, DNEffortWeightCurveName);
+
+	if (UAnimationBlueprintLibrary::DoesCurveExist(AnimationSequence, DNEffortTimeCurveName, ERawCurveTrackTypes::RCT_Float))
+		UAnimationBlueprintLibrary::RemoveCurve(AnimationSequence, DNEffortTimeCurveName);
 }
 
 FTransform UUpStageLabanMovementModifier::GetComponentSpaceTransform(UAnimSequence* AnimationSequence, FUpStageJointData TargetJoint, float Time) const
@@ -200,6 +219,87 @@ FUpStageJointDynamics UUpStageLabanMovementModifier::CalculateJointDynamics(UAni
 	return Dynamics;
 }
 
+//TArray<FVector> UUpStageLabanMovementModifier::SmoothVectorArray(const TArray<FVector>& InputData, int32 SmoothingWindow) const
+//{
+//	TArray<FVector> SmoothedData;
+//	int32 NumFrames = InputData.Num();
+//	SmoothedData.Init(FVector::ZeroVector, NumFrames);
+//
+//	if (NumFrames == 0) return SmoothedData;
+//	if (SmoothingWindow <= 1) return InputData;
+//
+//	int32 HalfWindow = SmoothingWindow / 2;
+//
+//	for (int32 i = 0; i < NumFrames; ++i)
+//	{
+//		FVector Sum = FVector::ZeroVector;
+//		int32 Count = 0;
+//
+//		// Clamp to valid array indices
+//		int32 StartIdx = FMath::Max(0, i - HalfWindow);
+//		int32 EndIdx = FMath::Min(NumFrames - 1, i + HalfWindow);
+//
+//		for (int32 j = StartIdx; j <= EndIdx; ++j)
+//		{
+//			Sum += InputData[j];
+//			Count++;
+//		}
+//
+//		SmoothedData[i] = Sum / Count;
+//	}
+//
+//	return SmoothedData;
+//}
+
+//FUpStageJointDynamics UUpStageLabanMovementModifier::CalculateJointDynamics(UAnimSequence* AnimationSequence, FUpStageJointData TargetJoint, TArray<float> Times) const
+//{
+//	FUpStageJointDynamics Dynamics;
+//	int32 NumFrames = Times.Num();
+//
+//	Dynamics.Positions.Reserve(NumFrames);
+//	Dynamics.Velocities.Init(FVector::ZeroVector, NumFrames);
+//	Dynamics.Accelerations.Init(FVector::ZeroVector, NumFrames);
+//	Dynamics.Jerks.Init(FVector::ZeroVector, NumFrames);
+//
+//	for (int32 j = 0; j < NumFrames; ++j)
+//	{
+//		FTransform JointTransform = GetComponentSpaceTransform(AnimationSequence, TargetJoint, Times[j]);
+//		Dynamics.Positions.Add(JointTransform.GetLocation());
+//	}
+//
+//	for (int32 j = 1; j < NumFrames; ++j)
+//	{
+//		float DeltaTime = Times[j] - Times[j - 1];
+//		if (DeltaTime > KINDA_SMALL_NUMBER)
+//		{
+//			Dynamics.Velocities[j] = (Dynamics.Positions[j] - Dynamics.Positions[j - 1]) / DeltaTime;
+//		}
+//	}
+//	Dynamics.Velocities = SmoothVectorArray(Dynamics.Velocities, SmoothWindowSize);
+//
+//	for (int32 j = 1; j < NumFrames; ++j)
+//	{
+//		float DeltaTime = Times[j] - Times[j - 1];
+//		if (DeltaTime > KINDA_SMALL_NUMBER)
+//		{
+//			Dynamics.Accelerations[j] = (Dynamics.Velocities[j] - Dynamics.Velocities[j - 1]) / DeltaTime;
+//		}
+//	}
+//	Dynamics.Accelerations = SmoothVectorArray(Dynamics.Accelerations, SmoothWindowSize);
+//
+//	for (int32 j = 1; j < NumFrames; ++j)
+//	{
+//		float DeltaTime = Times[j] - Times[j - 1];
+//		if (DeltaTime > KINDA_SMALL_NUMBER)
+//		{
+//			Dynamics.Jerks[j] = (Dynamics.Accelerations[j] - Dynamics.Accelerations[j - 1]) / DeltaTime;
+//		}
+//	}
+//	Dynamics.Jerks = SmoothVectorArray(Dynamics.Jerks, SmoothWindowSize);
+//
+//	return Dynamics;
+//}
+
 // Forward Window
 //float UUpStageLabanMovementModifier::CalculateEffortSpace(FUpStageJointDynamics JointDynamics, int32 FrameIndex, int32 NumFrames) const
 //{
@@ -228,10 +328,12 @@ float UUpStageLabanMovementModifier::CalculateEffortSpace(FUpStageJointDynamics 
 	int32 StartIndex = FMath::Max(0, FrameIndex - HalfWindow);
 	int32 EndIndex = FMath::Min(NumFrames - 1, FrameIndex + HalfWindow);
 
-	if (EndIndex <= StartIndex) return 1.f; // No movement if we don't have a valid window
+	if (EndIndex <= StartIndex) return 1.f;
 
 	float EffortSpaceNumerator = 0.f;
 	float EffortSpaceDenominator = (JointDynamics.Positions[EndIndex] - JointDynamics.Positions[StartIndex]).Size();
+	EffortSpaceDenominator = FMath::Max(EffortSpaceDenominator, MinSpaceDisplacement);
+	//UE_LOG(LogTemp, Log, TEXT("Start Pos: %s, End Pos: %s, Denominator: %f"), *JointDynamics.Positions[StartIndex].ToString(), *JointDynamics.Positions[EndIndex].ToString(), EffortSpaceDenominator);
 
 	int32 t0 = StartIndex + ShortTimeWindowSize;
 	for (int32 t = t0; t <= EndIndex; ++t)
@@ -254,7 +356,7 @@ float UUpStageLabanMovementModifier::CalculateEffortWeight(FUpStageJointDynamics
 
 	float VerticalAcceleration = JointDynamics.Accelerations[FrameIndex].Z;
 	float Force = JointDynamics.Accelerations[FrameIndex].Size(); // Assuming unit mass for simplicity
-	float GravityModifier = (VerticalAcceleration < 0.f) ? 1.5f : 0.5f; // Upward movements are weighted more than downward
+	float GravityModifier = (VerticalAcceleration > 0.f) ? 1.5f : 0.5f;
 	return Force * GravityModifier;
 }
 

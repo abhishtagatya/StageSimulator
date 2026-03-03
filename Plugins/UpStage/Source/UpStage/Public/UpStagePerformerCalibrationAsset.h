@@ -22,6 +22,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Baseline")
 	TObjectPtr<UAnimSequence> BaselineAnimation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sensitivity")
+	float SpaceSensitivity = 0.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sensitivity")
 	float WeightSensitivity = 0.f;
