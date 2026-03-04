@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "UpStageActionTransitionAnalysisParameter.h"
+#include "UpStageExtremityAnalysisParameter.h"
 #include "UpStageSequencerKeyMomentParameter.generated.h"
 
 
@@ -22,4 +23,7 @@ struct UPSTAGE_API FUpStageSequencerKeyMomentParameter
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Extremities")
 	bool bAnalyzeExtremities = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Extremities")
+	FUpStageExtremityAnalysisParameter ExtremityAnalysisParameter;
 };

@@ -8,7 +8,11 @@
 #include "UpStageSequencerMovementAnalysis.h"
 #include "UpStageSequencerKeyMomentParameter.h"
 #include "UpStageKeyMomentEvaluation.h"
+#include "UpStageLabanEffortActionDimension.h"
+#include "UpStageLabanEffortExtremities.h"
+#include "UpStageExtremityStructure.h"
 #include "UpStageAnalysisFunctions.generated.h"
+
 
 /**
  * 
@@ -29,5 +33,16 @@ public:
 	static EUpStageLabanEffortAction TransitionEffortAction(EUpStageLabanEffortAction EffortAction, FUpStageFrameMovementAnalysis FrameMovementAnalysis, FVector2D Threshold);
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
-	static int CalculateEffortTransitionScore(EUpStageLabanEffortAction PreviousEffortAction, EUpStageLabanEffortAction CurrentEffortAction, const FUpStageActionTransitionAnalysisParameter& Parameter);
+	static float CalculateEffortTransitionScore(EUpStageLabanEffortAction PreviousEffortAction, EUpStageLabanEffortAction CurrentEffortAction, const FUpStageActionTransitionAnalysisParameter& Parameter);
+
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
+	static float CalculateEffortIntensity(const FUpStageFrameMovementAnalysis& FrameMovementAnalysis);
+
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
+	static float CalculateEffortExtremityScore(const FUpStageFrameMovementAnalysis& FrameMovementAnalysis, FUpStageLabanEffortExtremities& EffortExtremtities, const FUpStageExtremityAnalysisParameter& Parameter);
+
+private:
+	static FUpStageLabanEffortActionDimension GetEffortDimensions(EUpStageLabanEffortAction Action);
+	static EUpStageLabanEffortAction GetEffortAction(FUpStageLabanEffortActionDimension Dimension);
+	static bool ExtremityDetection(float CurrentValue, FUpStageExtremityStructure& PrevExtremity, float Tolerance);
 };

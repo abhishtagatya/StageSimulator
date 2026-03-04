@@ -12,7 +12,7 @@ struct UPSTAGE_API FUpStageActionTransitionAnalysisParameter
 	GENERATED_BODY()
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter")
-	int32 EffortTransitionScore = 10;
+	float EffortTransitionScore = 10.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Parameter")
 	EUpStageLabanEffortAction BaseEffortAction = EUpStageLabanEffortAction::Glide;
