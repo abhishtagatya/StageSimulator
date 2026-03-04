@@ -27,7 +27,7 @@ public:
 	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMoments(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter);
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Selection")
-	static TArray<FUpStageKeyMomentEvaluation> SelectKeyMoments(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, int32 TopN);
+	static TArray<FUpStageKeyMomentEvaluation> SelectKeyMoments(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, const FUpStageSequencerKeyMomentParameter& Parameter);
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Selection")
 	static EUpStageLabanEffortAction TransitionEffortAction(EUpStageLabanEffortAction EffortAction, FUpStageFrameMovementAnalysis FrameMovementAnalysis, FVector2D Threshold);
@@ -45,4 +45,6 @@ private:
 	static FUpStageLabanEffortActionDimension GetEffortDimensions(EUpStageLabanEffortAction Action);
 	static EUpStageLabanEffortAction GetEffortAction(FUpStageLabanEffortActionDimension Dimension);
 	static bool ExtremityDetection(float CurrentValue, FUpStageExtremityStructure& PrevExtremity, float Tolerance);
+	static TArray<FUpStageKeyMomentEvaluation> NonMaximumSuppression(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, int32 MinFrameDistance);
+
 };

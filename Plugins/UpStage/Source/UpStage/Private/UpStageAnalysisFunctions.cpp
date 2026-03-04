@@ -78,19 +78,42 @@ float UUpStageAnalysisFunctions::CalculateEffortIntensity(const FUpStageFrameMov
 	return FMath::Abs(FrameMovementAnalysis.EffortSpace - 0.5f) * 2.f + FMath::Abs(FrameMovementAnalysis.EffortWeight - 0.5f) * 2.f + FMath::Abs(FrameMovementAnalysis.EffortTime - 0.5f) * 2.f;
 }
 
-TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::SelectKeyMoments(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, int32 TopN)
+TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::SelectKeyMoments(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, const FUpStageSequencerKeyMomentParameter& Parameter)
 {
     TArray<FUpStageKeyMomentEvaluation> SortedEvaluations = KeyMomentEvaluations;
     SortedEvaluations.Sort([](const FUpStageKeyMomentEvaluation& A, const FUpStageKeyMomentEvaluation& B) {
         return A.KeyMomentScore > B.KeyMomentScore;
     });
 
-    TArray<FUpStageKeyMomentEvaluation> SelectedKeyMoments;
-    for (int32 i = 0; i < FMath::Min(TopN, SortedEvaluations.Num()); ++i)
+    if (Parameter.bUseNonMaximumSupression) SortedEvaluations = NonMaximumSuppression(SortedEvaluations, Parameter.MinFrameDistance);
+    if (SortedEvaluations.Num() > Parameter.TopN) SortedEvaluations.SetNum(Parameter.TopN);
+
+    return SortedEvaluations;
+}
+
+TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::NonMaximumSuppression(const TArray<FUpStageKeyMomentEvaluation>& SortedKeyMoments, int32 MinFrameDistance)
+{
+    TArray<FUpStageKeyMomentEvaluation> FilteredMoments;
+    for (const FUpStageKeyMomentEvaluation& CurrentEval : SortedKeyMoments)
     {
-        SelectedKeyMoments.Add(SortedEvaluations[i]);
+        bool bIsSuppressed = false;
+
+        for (const FUpStageKeyMomentEvaluation& KeptEval : FilteredMoments)
+        {
+            if (FMath::Abs(CurrentEval.FrameIndex - KeptEval.FrameIndex) < MinFrameDistance)
+            {
+                bIsSuppressed = true;
+                break;
+            }
+        }
+
+        if (!bIsSuppressed)
+        {
+            FilteredMoments.Add(CurrentEval);
+        }
     }
-    return SelectedKeyMoments;
+
+    return FilteredMoments;
 }
 
 FUpStageLabanEffortActionDimension UUpStageAnalysisFunctions::GetEffortDimensions(EUpStageLabanEffortAction Action)
@@ -173,7 +196,7 @@ bool UUpStageAnalysisFunctions::ExtremityDetection(float CurrentValue, FUpStageE
     {
         PrevExtremity.MaxValue = CurrentValue;
     }
-    else
+    if (CurrentValue < PrevExtremity.MinValue)
     {
         PrevExtremity.MinValue = CurrentValue;
     }

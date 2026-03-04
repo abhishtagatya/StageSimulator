@@ -11,9 +11,18 @@ USTRUCT(BlueprintType)
 struct UPSTAGE_API FUpStageSequencerKeyMomentParameter
 {
 	GENERATED_BODY()
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Frame")
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Selection")
+	int32 TopN = 5;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Selection")
 	int32 FramePadding = 10;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Selection")
+	bool bUseNonMaximumSupression = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Selection")
+	int32 MinFrameDistance = 30;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Transition")
 	bool bAnalyzeActionTransition = true;
