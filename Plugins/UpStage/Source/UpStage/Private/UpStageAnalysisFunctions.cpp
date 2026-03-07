@@ -58,12 +58,13 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
                     Parameter.ExtremityAnalysisParameter);
             }
 
-            if (FrameScore > 10.f)
+            if (FrameScore > Parameter.MinPerformerScore)
             {
                 FUpStageKeyMomentEvaluation& ExistingEvaluation = KeyMomentEvaluations.FindOrAdd(FrameIndex);
                 ExistingEvaluation.FrameIndex = FrameIndex;
                 ExistingEvaluation.KeyMomentScore += FrameScore;
                 ExistingEvaluation.Actors.Add(Actor);
+                ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
 			}
         }
     }
@@ -71,6 +72,76 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 	// Convert the map to an array for easier use in Blueprints
 	KeyMomentEvaluations.GenerateValueArray(KeyMomentsArray);
 	return KeyMomentsArray;
+}
+
+TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMomentsFromSelectedFrames(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& Frames)
+{
+    TMap<int32, FUpStageKeyMomentEvaluation> KeyMomentEvaluations;
+    TArray<FUpStageKeyMomentEvaluation> KeyMomentsArray;
+
+    for (const TPair<AActor*, FUpStageSequencerMovementAnalysis>& Pair : PerformerFrameActions)
+    {
+        AActor* Actor = Pair.Key;
+        const FUpStageSequencerMovementAnalysis& MovementAnalysis = Pair.Value;
+
+        if (!Actor) continue;
+
+        EUpStageLabanEffortAction PrevEffortAction = Parameter.ActionTransitionAnalysisParameter.BaseEffortAction;
+        FUpStageLabanEffortExtremities PrevExtremity;
+        PrevExtremity.SpaceExtremity.MinValue = PrevExtremity.SpaceExtremity.MaxValue = MovementAnalysis.FrameMovementAnalyses[0].EffortSpace;
+        PrevExtremity.WeightExtremity.MinValue = PrevExtremity.WeightExtremity.MaxValue = MovementAnalysis.FrameMovementAnalyses[0].EffortWeight;
+        PrevExtremity.TimeExtremity.MinValue = PrevExtremity.TimeExtremity.MaxValue = MovementAnalysis.FrameMovementAnalyses[0].EffortTime;
+
+        int32 TotalFrames = MovementAnalysis.FrameMovementAnalyses.Num();
+        for (int FrameIndex = 0; FrameIndex < TotalFrames; ++FrameIndex)
+        {
+            if (FrameIndex <= Parameter.FramePadding || FrameIndex >= TotalFrames - Parameter.FramePadding) continue;
+
+            float FrameScore = CalculateEffortIntensity(MovementAnalysis.FrameMovementAnalyses[FrameIndex]);
+
+            if (Parameter.bAnalyzeActionTransition)
+            {
+                EUpStageLabanEffortAction CurrentEffortAction = TransitionEffortAction(
+                    PrevEffortAction,
+                    MovementAnalysis.FrameMovementAnalyses[FrameIndex],
+                    Parameter.ActionTransitionAnalysisParameter.ActionTransitionThreshold);
+
+                if (CurrentEffortAction != PrevEffortAction)
+                {
+                    FrameScore += CalculateEffortTransitionScore(
+                        PrevEffortAction,
+                        CurrentEffortAction,
+                        Parameter.ActionTransitionAnalysisParameter);
+                }
+
+                PrevEffortAction = CurrentEffortAction;
+            }
+
+            if (Parameter.bAnalyzeExtremities)
+            {
+                // Analyze effort actions
+                // This is a placeholder for the actual analysis logic, which would likely involve using the SelectEffortAction function to determine the effort action for the current frame and comparing it with previous frames to detect changes.
+
+                FrameScore += CalculateEffortExtremityScore(
+                    MovementAnalysis.FrameMovementAnalyses[FrameIndex],
+                    PrevExtremity,
+                    Parameter.ExtremityAnalysisParameter);
+            }
+
+            if (Frames.Contains(FrameIndex))
+            {
+                FUpStageKeyMomentEvaluation& ExistingEvaluation = KeyMomentEvaluations.FindOrAdd(FrameIndex);
+                ExistingEvaluation.FrameIndex = FrameIndex;
+                ExistingEvaluation.KeyMomentScore += FrameScore;
+                ExistingEvaluation.Actors.Add(Actor);
+                ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
+            }
+        }
+    }
+
+    // Convert the map to an array for easier use in Blueprints
+    KeyMomentEvaluations.GenerateValueArray(KeyMomentsArray);
+    return KeyMomentsArray;
 }
 
 float UUpStageAnalysisFunctions::CalculateEffortIntensity(const FUpStageFrameMovementAnalysis& FrameMovementAnalysis)

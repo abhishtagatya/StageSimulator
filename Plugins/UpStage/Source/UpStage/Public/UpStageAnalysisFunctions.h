@@ -26,9 +26,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
 	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMoments(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter);
 
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
+	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMomentsFromSelectedFrames(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& Frames);
+
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Selection")
 	static TArray<FUpStageKeyMomentEvaluation> SelectKeyMoments(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, const FUpStageSequencerKeyMomentParameter& Parameter);
-
+	
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Selection")
 	static EUpStageLabanEffortAction TransitionEffortAction(EUpStageLabanEffortAction EffortAction, FUpStageFrameMovementAnalysis FrameMovementAnalysis, FVector2D Threshold);
 

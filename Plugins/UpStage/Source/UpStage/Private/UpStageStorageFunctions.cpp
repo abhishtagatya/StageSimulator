@@ -6,7 +6,8 @@
 void UUpStageStorageFunctions::TrackActorMovementAnalysis(
     TMap<AActor*, FUpStageSequencerMovementAnalysis>& Map,
     AActor* Actor,
-    const FUpStageFrameMovementAnalysis& FrameAnalysis)
+    const FUpStageFrameMovementAnalysis& FrameAnalysis,
+    const FUpStagePerformerFocalStructure& FocalStructure)
 {
     if (!Actor) return;
 
@@ -14,4 +15,5 @@ void UUpStageStorageFunctions::TrackActorMovementAnalysis(
         Map.FindOrAdd(Actor);
 
     MovementAnalysis.FrameMovementAnalyses.Add(FrameAnalysis);
+    MovementAnalysis.FrameFocalStructures.Add(FocalStructure);
 }

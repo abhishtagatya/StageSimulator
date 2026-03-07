@@ -6,6 +6,7 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "UpStageFrameMovementAnalysis.h"
 #include "UpStageSequencerMovementAnalysis.h"
+#include "UpStagePerformerFocalStructure.h"
 #include "UpStageStorageFunctions.generated.h"
 
 /**
@@ -22,7 +23,8 @@ public:
 	static void TrackActorMovementAnalysis(
 		UPARAM(ref) TMap<AActor*, FUpStageSequencerMovementAnalysis>& Map,
 		AActor* Actor,
-		const FUpStageFrameMovementAnalysis& FrameAnalysis
+		const FUpStageFrameMovementAnalysis& FrameAnalysis,
+		const FUpStagePerformerFocalStructure& FocalStructure
 	);
 	
 };

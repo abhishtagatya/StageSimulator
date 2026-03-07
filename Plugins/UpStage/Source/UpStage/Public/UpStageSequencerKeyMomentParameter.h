@@ -19,6 +19,9 @@ struct UPSTAGE_API FUpStageSequencerKeyMomentParameter
 	int32 FramePadding = 10;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Selection")
+	float MinPerformerScore = 10.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Selection")
 	bool bUseNonMaximumSupression = true;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Selection")
