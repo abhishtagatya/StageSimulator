@@ -144,11 +144,6 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
     return KeyMomentsArray;
 }
 
-float UUpStageAnalysisFunctions::CalculateEffortIntensity(const FUpStageFrameMovementAnalysis& FrameMovementAnalysis)
-{
-	return FMath::Abs(FrameMovementAnalysis.EffortSpace - 0.5f) * 2.f + FMath::Abs(FrameMovementAnalysis.EffortWeight - 0.5f) * 2.f + FMath::Abs(FrameMovementAnalysis.EffortTime - 0.5f) * 2.f;
-}
-
 TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::SelectKeyMoments(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, const FUpStageSequencerKeyMomentParameter& Parameter)
 {
     TArray<FUpStageKeyMomentEvaluation> SortedEvaluations = KeyMomentEvaluations;
@@ -185,6 +180,102 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::NonMaximumSuppres
     }
 
     return FilteredMoments;
+}
+
+ACineCameraActor* UUpStageAnalysisFunctions::SelectBestCameraForKeyMoment(const TArray<ACineCameraActor*>& CameraArray, const FUpStageKeyMomentEvaluation& KeyMoment, const FUpStageSequencerCameraCutsParameter& Parameter)
+{
+    if (KeyMoment.FocalStructures.IsEmpty() || CameraArray.IsEmpty()) return nullptr;
+
+	TMap<ACineCameraActor*, float> CameraScores;
+
+	FVector PerformerSumLocation = FVector::ZeroVector;
+	FVector PerformerSumForward = FVector::ZeroVector;
+
+    for (const FUpStagePerformerFocalStructure& FocalStruct : KeyMoment.FocalStructures)
+    {
+        PerformerSumLocation += FocalStruct.MainFocalTransform.GetLocation();
+        PerformerSumForward += FocalStruct.MainFocalDirection;
+	}
+
+	FVector AlignmentCentroid = PerformerSumLocation / KeyMoment.FocalStructures.Num();
+	FVector AlignmentForward = PerformerSumForward.GetSafeNormal();
+
+    for (ACineCameraActor* Camera : CameraArray)
+    {
+        float AlignmentScore = CalculateAlignmentScore(Camera, AlignmentCentroid, AlignmentForward, Parameter.CameraSelectionParameter);
+		float VisibilityScore = CalculateVisibilityScore(Camera, KeyMoment.FocalStructures, Parameter.CameraSelectionParameter);
+        float CompositionScore = 0.f; // Placeholder for actual composition calculation
+        float TotalScore = AlignmentScore + VisibilityScore + CompositionScore;
+        CameraScores.Add(Camera, TotalScore);
+	}
+
+	ACineCameraActor* BestCamera = nullptr;
+    for (const TPair<ACineCameraActor*, float>& Pair : CameraScores)
+    {
+        if (!BestCamera || Pair.Value > CameraScores[BestCamera])
+        {
+            BestCamera = Pair.Key;
+        }
+	}
+
+    return BestCamera;
+}
+
+float UUpStageAnalysisFunctions::CalculateAlignmentScore(ACineCameraActor* Camera, FVector Centroid, FVector Forward, const FUpStageCameraSelectionParameter& Parameter)
+{
+    if (!Camera) return 0.f;
+    FVector CameraLocation = Camera->GetActorLocation();
+    FVector CameraForward = Camera->GetActorForwardVector();
+    float CurrentDot = FVector::DotProduct((CameraLocation - Centroid).GetSafeNormal(), Forward);
+    return ((CurrentDot + 1.0f) / 2.0f) * Parameter.AlignmentScore;
+}
+
+float UUpStageAnalysisFunctions::CalculateVisibilityScore(ACineCameraActor* Camera, const TArray<FUpStagePerformerFocalStructure>& FocalStructures, const FUpStageCameraSelectionParameter& Parameter)
+{
+	if (!Camera || FocalStructures.Num() == 0) return 0.f;
+
+	UWorld* World = Camera->GetWorld();
+	if (!World) return 0.f;
+
+    float TotalVisibilityScore = 0.0f;
+
+    FVector CameraLocation = Camera->GetActorLocation();
+    FCollisionQueryParams TraceParams(FName(TEXT("CameraVisibilityTrace")), Parameter.bUseComplexTrace);
+    TraceParams.AddIgnoredActor(Camera);
+
+    for (const FUpStagePerformerFocalStructure& FocalStruct : FocalStructures)
+    {
+        FVector TargetLocation = FocalStruct.MainFocalTransform.GetLocation();
+
+        bool bIsObstructed = World->LineTraceTestByChannel(
+            CameraLocation,
+            TargetLocation,
+            ECC_Visibility,
+            TraceParams
+        );
+
+		TotalVisibilityScore += Parameter.VisibilityScore * !(bIsObstructed);
+
+        for (const FUpStagePerformerFocalMember& Member : FocalStruct.FocalMembers)
+        {
+            FVector MemberLocation = Member.FocalMemberTransform.GetLocation();
+            bool bIsMemberObstructed = World->LineTraceTestByChannel(
+                CameraLocation,
+                MemberLocation,
+                ECC_Visibility,
+                TraceParams
+            );
+
+            TotalVisibilityScore += Parameter.VisibilityScore * Member.ImportanceScore * !(bIsMemberObstructed);
+        }
+    }
+
+    return TotalVisibilityScore;
+}
+
+float UUpStageAnalysisFunctions::CalculateEffortIntensity(const FUpStageFrameMovementAnalysis& FrameMovementAnalysis)
+{
+    return FMath::Abs(FrameMovementAnalysis.EffortSpace - 0.5f) * 2.f + FMath::Abs(FrameMovementAnalysis.EffortWeight - 0.5f) * 2.f + FMath::Abs(FrameMovementAnalysis.EffortTime - 0.5f) * 2.f;
 }
 
 FUpStageLabanEffortActionDimension UUpStageAnalysisFunctions::GetEffortDimensions(EUpStageLabanEffortAction Action)

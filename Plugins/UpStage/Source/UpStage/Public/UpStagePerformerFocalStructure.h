@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "UpStagePerformerFocalMember.h"
 #include "UpStagePerformerFocalStructure.generated.h"
 
 
@@ -11,8 +12,11 @@ struct UPSTAGE_API FUpStagePerformerFocalStructure
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Transform")
-	FTransform FocalTransform;
+	FTransform MainFocalTransform;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Direction")
-	FVector FocalForwardDirection;
+	FVector MainFocalDirection;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Members")
+	TArray<FUpStagePerformerFocalMember> FocalMembers;
 };

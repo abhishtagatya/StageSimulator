@@ -30,6 +30,7 @@ public class UpStage : ModuleRules
 				"AnimationBlueprintLibrary",
 				"CoreUObject",
 				"Engine",
+                "CinematicCamera"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
