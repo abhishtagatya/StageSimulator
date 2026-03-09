@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "UpStageCameraSelectionParameter.h"
+#include "UpStageCameraGenerationParameter.h"
+#include "CineCameraActor.h"
 #include "UpStageSequencerCameraCutsParameter.generated.h"
 
 
@@ -11,15 +13,9 @@ struct UPSTAGE_API FUpStageSequencerCameraCutsParameter
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Selection")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Selection")
 	FUpStageCameraSelectionParameter CameraSelectionParameter;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation|Frame")
-	int32 FrameSpan = 30;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation|Frame")
-	int32 PlaybackStart = 0;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation|Frame")
-	int32 PlaybackEnd = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation")
+	FUpStageCameraGenerationParameter CameraGenerationParameter;
 };

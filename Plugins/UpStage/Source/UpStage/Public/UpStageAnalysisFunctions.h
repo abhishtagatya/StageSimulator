@@ -13,6 +13,7 @@
 #include "UpStageExtremityStructure.h"
 #include "UpStageSequencerCameraCutsParameter.h"
 #include "UpStageCameraSelectionParameter.h"
+#include "UpStageCameraCut.h"
 #include "CineCameraActor.h"
 #include "UpStageAnalysisFunctions.generated.h"
 
@@ -54,10 +55,20 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
 	static float CalculateVisibilityScore(ACineCameraActor* Camera, const TArray<FUpStagePerformerFocalStructure>& FocalStructures, const FUpStageCameraSelectionParameter& Parameter);
+
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
+	static float CalculateCompositionScore(ACineCameraActor* Camera, const TArray<FUpStagePerformerFocalStructure>& FocalStructures, const FUpStageCameraSelectionParameter& Parameter);
+
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
+	static TArray<FUpStageCameraCut> StitchCameraCuts(const TArray<FUpStageCameraCut>& CameraCuts, const FVector2D& FrameBounds, const FUpStageSequencerCameraCutsParameter& Parameter);
+
 private:
 	static FUpStageLabanEffortActionDimension GetEffortDimensions(EUpStageLabanEffortAction Action);
 	static EUpStageLabanEffortAction GetEffortAction(FUpStageLabanEffortActionDimension Dimension);
 	static bool ExtremityDetection(float CurrentValue, FUpStageExtremityStructure& PrevExtremity, float Tolerance);
+
 	static TArray<FUpStageKeyMomentEvaluation> NonMaximumSuppression(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, int32 MinFrameDistance);
 
+	static TArray<FUpStageCameraCut> FillCameraCutWithFallback(const TArray<FUpStageCameraCut>& CameraCuts, const FUpStageSequencerCameraCutsParameter& Parameter);
+	static TArray<FUpStageCameraCut> FillCameraCutWithNeighbor(const TArray<FUpStageCameraCut>& CameraCuts, const FUpStageSequencerCameraCutsParameter& Parameter);
 };

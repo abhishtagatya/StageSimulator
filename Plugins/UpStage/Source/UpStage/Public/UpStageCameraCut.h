@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "CineCameraActor.h"
 #include "UpStageCameraCut.generated.h"
 
 
