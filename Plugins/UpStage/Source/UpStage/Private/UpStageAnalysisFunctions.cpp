@@ -395,7 +395,7 @@ bool UUpStageAnalysisFunctions::ExtremityDetection(float CurrentValue, FUpStageE
 
 TArray<FUpStageCameraCut> UUpStageAnalysisFunctions::StitchCameraCuts(
 	const TArray<FUpStageCameraCut>& CameraCuts, 
-	const FVector2D& FrameBounds,
+	const FIntPoint& FrameBounds,
 	const FUpStageSequencerCameraCutsParameter& Parameter)
 {
 	TArray<FUpStageCameraCut> StitchedCuts;
@@ -406,8 +406,8 @@ TArray<FUpStageCameraCut> UUpStageAnalysisFunctions::StitchCameraCuts(
 		return A.FrameStart < B.FrameStart;
 	});
 
-	int32 BoundX = FMath::RoundToInt32(FrameBounds.X);
-	int32 BoundY = FMath::RoundToInt32(FrameBounds.Y);
+	int32 BoundX = FrameBounds.X;
+	int32 BoundY = FrameBounds.Y;
 
 	bool bHasPrevious = false;
 	FUpStageCameraCut PreviousCut;

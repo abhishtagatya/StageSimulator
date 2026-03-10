@@ -60,7 +60,7 @@ public:
 	static float CalculateCompositionScore(ACineCameraActor* Camera, const TArray<FUpStagePerformerFocalStructure>& FocalStructures, const FUpStageCameraSelectionParameter& Parameter);
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
-	static TArray<FUpStageCameraCut> StitchCameraCuts(const TArray<FUpStageCameraCut>& CameraCuts, const FVector2D& FrameBounds, const FUpStageSequencerCameraCutsParameter& Parameter);
+	static TArray<FUpStageCameraCut> StitchCameraCuts(const TArray<FUpStageCameraCut>& CameraCuts, const FIntPoint& FrameBounds, const FUpStageSequencerCameraCutsParameter& Parameter);
 
 private:
 	static FUpStageLabanEffortActionDimension GetEffortDimensions(EUpStageLabanEffortAction Action);
