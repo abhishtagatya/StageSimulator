@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "ConsoleVariablesAsset.h"
 #include "UpStageSequencerRenderQueueParameter.generated.h"
 
 
@@ -24,5 +25,8 @@ struct UPSTAGE_API FUpStageSequencerRenderQueueParameter
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Queue")
 	FIntPoint OutputResolution = FIntPoint(1920, 1080);
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Render Queue")
+	UConsoleVariablesAsset* OverrideConsoleVariables = nullptr;
 
 };
