@@ -4,7 +4,10 @@
 #include "UpStageAnalysisFunctions.h"
 
 
-TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter)
+TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments(
+	const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, 
+	const FUpStageSequencerKeyMomentParameter& Parameter,
+	const TArray<int32>& ManualFrames)
 {
 	TMap<int32, FUpStageKeyMomentEvaluation> KeyMomentEvaluations;
 	TArray<FUpStageKeyMomentEvaluation> KeyMomentsArray;
@@ -28,6 +31,7 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 			if (FrameIndex <= Parameter.FramePadding || FrameIndex >= TotalFrames - Parameter.FramePadding) continue;
 
 			float FrameScore = CalculateEffortIntensity(MovementAnalysis.FrameMovementAnalyses[FrameIndex]);
+			bool bIsManual = ManualFrames.Contains(FrameIndex);
 
 			if (Parameter.bAnalyzeActionTransition)
 			{
@@ -49,20 +53,18 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 
 			if (Parameter.bAnalyzeExtremities)
 			{
-				// Analyze effort actions
-				// This is a placeholder for the actual analysis logic, which would likely involve using the SelectEffortAction function to determine the effort action for the current frame and comparing it with previous frames to detect changes.
-
 				FrameScore += CalculateEffortExtremityScore(
 					MovementAnalysis.FrameMovementAnalyses[FrameIndex], 
 					PrevExtremity,
 					Parameter.ExtremityAnalysisParameter);
 			}
 
-			if (FrameScore > Parameter.MinPerformerScore)
+			if (bIsManual || FrameScore > Parameter.MinPerformerScore)
 			{
 				FUpStageKeyMomentEvaluation& ExistingEvaluation = KeyMomentEvaluations.FindOrAdd(FrameIndex);
 				ExistingEvaluation.FrameIndex = FrameIndex;
 				ExistingEvaluation.KeyMomentScore += FrameScore;
+				ExistingEvaluation.bIsManualOverride = bIsManual;
 				ExistingEvaluation.Actors.Add(Actor);
 				ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
 			}
@@ -119,9 +121,6 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 
 			if (Parameter.bAnalyzeExtremities)
 			{
-				// Analyze effort actions
-				// This is a placeholder for the actual analysis logic, which would likely involve using the SelectEffortAction function to determine the effort action for the current frame and comparing it with previous frames to detect changes.
-
 				FrameScore += CalculateEffortExtremityScore(
 					MovementAnalysis.FrameMovementAnalyses[FrameIndex],
 					PrevExtremity,
@@ -148,13 +147,29 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::SelectKeyMoments(
 {
 	TArray<FUpStageKeyMomentEvaluation> SortedEvaluations = KeyMomentEvaluations;
 	SortedEvaluations.Sort([](const FUpStageKeyMomentEvaluation& A, const FUpStageKeyMomentEvaluation& B) {
+		if (A.bIsManualOverride != B.bIsManualOverride) return A.bIsManualOverride;
+
 		return A.KeyMomentScore > B.KeyMomentScore;
 	});
 
 	if (Parameter.bUseNonMaximumSupression) SortedEvaluations = NonMaximumSuppression(SortedEvaluations, Parameter.MinFrameDistance);
-	if (SortedEvaluations.Num() > Parameter.TopN) SortedEvaluations.SetNum(Parameter.TopN);
+	TArray<FUpStageKeyMomentEvaluation> FinalEvaluations;
+	int32 AutoFramesKept = 0;
 
-	return SortedEvaluations;
+	for (const FUpStageKeyMomentEvaluation& Eval : SortedEvaluations)
+	{
+		if (Eval.bIsManualOverride)
+		{
+			FinalEvaluations.Add(Eval);
+		}
+		else if (AutoFramesKept < Parameter.TopN)
+		{
+			FinalEvaluations.Add(Eval);
+			AutoFramesKept++;
+		}
+	}
+
+	return FinalEvaluations;
 }
 
 TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::NonMaximumSuppression(const TArray<FUpStageKeyMomentEvaluation>& SortedKeyMoments, int32 MinFrameDistance)
@@ -162,6 +177,12 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::NonMaximumSuppres
 	TArray<FUpStageKeyMomentEvaluation> FilteredMoments;
 	for (const FUpStageKeyMomentEvaluation& CurrentEval : SortedKeyMoments)
 	{
+		if (CurrentEval.bIsManualOverride)
+		{
+			FilteredMoments.Add(CurrentEval);
+			continue;
+		}
+
 		bool bIsSuppressed = false;
 
 		for (const FUpStageKeyMomentEvaluation& KeptEval : FilteredMoments)

@@ -20,6 +20,9 @@ struct UPSTAGE_API FUpStageKeyMomentEvaluation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Frame")
 	int32 FrameIndex;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Frame")
+	bool bIsManualOverride = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Score")
 	int32 KeyMomentScore;
 };

@@ -1,8 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "AnimPose.h"
 #include "UpStageLabanMovementModifier.h"
+#include "AnimPose.h"
 #include "UpStageLabanMovementAnalysisType.h"
 #include "UpStageJointData.h"
 #include "UpStageJointDynamics.h"

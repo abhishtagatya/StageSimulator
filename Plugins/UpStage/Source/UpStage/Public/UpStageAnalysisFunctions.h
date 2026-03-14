@@ -26,8 +26,8 @@ class UPSTAGE_API UUpStageAnalysisFunctions : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
-	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMoments(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter);
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis", meta = (AutoCreateRefTerm = "ManualFrames"))
+	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMoments(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& ManualFrames);
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
 	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMomentsFromSelectedFrames(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& Frames);
