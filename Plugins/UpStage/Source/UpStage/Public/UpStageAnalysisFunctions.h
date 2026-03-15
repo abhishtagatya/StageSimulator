@@ -15,6 +15,7 @@
 #include "UpStageCameraSelectionParameter.h"
 #include "UpStageCameraCut.h"
 #include "CineCameraActor.h"
+#include "CineCameraComponent.h"
 #include "UpStageAnalysisFunctions.generated.h"
 
 /**

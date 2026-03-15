@@ -63,15 +63,17 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 			{
 				FUpStageKeyMomentEvaluation& ExistingEvaluation = KeyMomentEvaluations.FindOrAdd(FrameIndex);
 				ExistingEvaluation.FrameIndex = FrameIndex;
-				ExistingEvaluation.KeyMomentScore += FrameScore;
-				ExistingEvaluation.bIsManualOverride = bIsManual;
-				ExistingEvaluation.Actors.Add(Actor);
-				ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
+
+				if (FrameScore > Parameter.MinPerformerScore)
+				{
+					ExistingEvaluation.KeyMomentScore += FrameScore;
+					ExistingEvaluation.Actors.Add(Actor);
+					ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
+				}
 			}
 		}
 	}
 
-	// Convert the map to an array for easier use in Blueprints
 	KeyMomentEvaluations.GenerateValueArray(KeyMomentsArray);
 	return KeyMomentsArray;
 }
@@ -127,18 +129,21 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 					Parameter.ExtremityAnalysisParameter);
 			}
 
-			if (Frames.Contains(FrameIndex))
+			if (Frames.Contains(FrameIndex) && FrameScore > Parameter.MinPerformerScore)
 			{
 				FUpStageKeyMomentEvaluation& ExistingEvaluation = KeyMomentEvaluations.FindOrAdd(FrameIndex);
 				ExistingEvaluation.FrameIndex = FrameIndex;
-				ExistingEvaluation.KeyMomentScore += FrameScore;
-				ExistingEvaluation.Actors.Add(Actor);
-				ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
+
+				if (FrameScore > Parameter.MinPerformerScore)
+				{
+					ExistingEvaluation.KeyMomentScore += FrameScore;
+					ExistingEvaluation.Actors.Add(Actor);
+					ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
+				}
 			}
 		}
 	}
 
-	// Convert the map to an array for easier use in Blueprints
 	KeyMomentEvaluations.GenerateValueArray(KeyMomentsArray);
 	return KeyMomentsArray;
 }
@@ -207,6 +212,7 @@ ACineCameraActor* UUpStageAnalysisFunctions::SelectBestCameraForKeyMoment(const 
 {
 	if (KeyMoment.FocalStructures.IsEmpty() || CameraArray.IsEmpty()) return nullptr;
 
+	UE_LOG(LogTemp, Log, TEXT("Frame Index: %d, Actors: %d"), KeyMoment.FrameIndex, KeyMoment.FocalStructures.Num());
 	TMap<ACineCameraActor*, float> CameraScores;
 
 	FVector PerformerSumLocation = FVector::ZeroVector;
@@ -225,8 +231,10 @@ ACineCameraActor* UUpStageAnalysisFunctions::SelectBestCameraForKeyMoment(const 
 	{
 		float AlignmentScore = CalculateAlignmentScore(Camera, AlignmentCentroid, AlignmentForward, Parameter.CameraSelectionParameter);
 		float VisibilityScore = CalculateVisibilityScore(Camera, KeyMoment.FocalStructures, Parameter.CameraSelectionParameter);
-		float CompositionScore = 0.f; // Placeholder for actual composition calculation
+		float CompositionScore = CalculateCompositionScore(Camera, KeyMoment.FocalStructures, Parameter.CameraSelectionParameter);
 		float TotalScore = AlignmentScore + VisibilityScore + CompositionScore;
+
+		UE_LOG(LogTemp, Log, TEXT("Camera: %s, Alignment: %.2f, Visibility: %.2f, Composition: %.2f, Total: %.2f"), *Camera->GetName(), AlignmentScore, VisibilityScore, CompositionScore, TotalScore);
 		CameraScores.Add(Camera, TotalScore);
 	}
 
@@ -296,8 +304,66 @@ float UUpStageAnalysisFunctions::CalculateVisibilityScore(ACineCameraActor* Came
 
 float UUpStageAnalysisFunctions::CalculateCompositionScore(ACineCameraActor* Camera, const TArray<FUpStagePerformerFocalStructure>& FocalStructures, const FUpStageCameraSelectionParameter& Parameter)
 {
-	// Placeholder for actual composition score calculation logic
-	return 0.f;
+	if (!Camera || FocalStructures.IsEmpty()) return 0.f;
+
+	UCineCameraComponent* CameraComp = Camera->GetCineCameraComponent();
+	if (!CameraComp) return 0.f;
+
+	FTransform CameraTransform = Camera->GetActorTransform();
+	float FOV = CameraComp->FieldOfView;
+	float AspectRatio = CameraComp->AspectRatio;
+
+	float TanHalfFOV = FMath::Tan(FMath::DegreesToRadians(FOV * 0.5f));
+	float TotalCompositionScore = 0.f;
+
+	for (const FUpStagePerformerFocalStructure& FocalStruct : FocalStructures)
+	{
+		FVector LocalLoc = CameraTransform.InverseTransformPosition(FocalStruct.MainFocalTransform.GetLocation());
+		if (LocalLoc.X <= 0.f)
+		{
+			TotalCompositionScore -= Parameter.CompositionScore;
+			continue;
+		}
+
+		float ScreenX = LocalLoc.Y / (LocalLoc.X * TanHalfFOV);
+		float ScreenY = LocalLoc.Z / (LocalLoc.X * (TanHalfFOV / AspectRatio));
+
+		if (FMath::Abs(ScreenX) > 1.0f || FMath::Abs(ScreenY) > 1.0f)
+		{
+			TotalCompositionScore -= (Parameter.CompositionScore * Parameter.CompositionOffScreenPenalty);
+			continue;
+		}
+		else if (FMath::Abs(ScreenX) > Parameter.CompositionEdgeScreen || FMath::Abs(ScreenY) > Parameter.CompositionEdgeScreen)
+		{
+			TotalCompositionScore -= (Parameter.CompositionScore * Parameter.CompositionEdgeScreenPenalty);
+		}
+
+		float DistToThirdX = FMath::Min(FMath::Abs(ScreenX - 0.333f), FMath::Abs(ScreenX + 0.333f));
+		float ThirdsScoreX = 1.0f - FMath::Clamp(DistToThirdX * 1.5f, 0.0f, 1.0f);
+
+		float HeadroomScore = 1.0f - FMath::Clamp(FMath::Abs(ScreenY - 0.333f) * 2.0f, 0.0f, 1.0f);
+
+		TotalCompositionScore += Parameter.CompositionScore * (ThirdsScoreX * Parameter.CompositionRuleOfThirdsPortion + HeadroomScore * Parameter.CompositionHeadroomPortion);
+
+		if (!Parameter.bCheckFocalMemberComposition) continue;
+
+		for (const FUpStagePerformerFocalMember& Member : FocalStruct.FocalMembers)
+		{
+			FVector MemberLocal = CameraTransform.InverseTransformPosition(Member.FocalMemberTransform.GetLocation());
+			if (MemberLocal.X > 0.f)
+			{
+				float MemScreenX = MemberLocal.Y / (MemberLocal.X * TanHalfFOV);
+				float MemScreenY = MemberLocal.Z / (MemberLocal.X * (TanHalfFOV / AspectRatio));
+
+				if (FMath::Abs(MemScreenX) <= Parameter.CompositionSafeScreen && FMath::Abs(MemScreenY) <= Parameter.CompositionSafeScreen)
+				{
+					TotalCompositionScore += (Parameter.CompositionScore * Parameter.CompositionFocalMemberSafeBoost * Member.ImportanceScore);
+				}
+			}
+		}
+	}
+
+	return TotalCompositionScore;
 }
 
 float UUpStageAnalysisFunctions::CalculateEffortIntensity(const FUpStageFrameMovementAnalysis& FrameMovementAnalysis)
@@ -504,7 +570,6 @@ TArray<FUpStageCameraCut> UUpStageAnalysisFunctions::StitchCameraCuts(
 		StitchedCuts.Add(FinalGap);
 	}
 
-	// Forward pass to fill gaps with fallback or previous cameras
 	switch (Parameter.CameraGenerationParameter.CutFillMethod)
 	{
 		case EUpStageCameraCutFillMethod::Fallback:
@@ -532,7 +597,6 @@ TArray<FUpStageCameraCut> UUpStageAnalysisFunctions::FillCameraCutWithFallback(
 			StitchedCuts[i].Camera = Parameter.CameraGenerationParameter.FallbackCamera;
 		}
 	}
-
 
 	return StitchedCuts;
 }
