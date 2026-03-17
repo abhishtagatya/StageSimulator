@@ -32,7 +32,10 @@ public class UpStage : ModuleRules
 				"Engine",
                 "CinematicCamera",
 				"InputCore",
-                "ConsoleVariablesEditorRuntime"
+                "ConsoleVariablesEditorRuntime",
+                "LevelSequence",
+                "MovieScene",
+                "MovieSceneTracks"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

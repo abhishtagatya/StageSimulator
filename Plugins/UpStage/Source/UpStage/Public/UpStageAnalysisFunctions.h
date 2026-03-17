@@ -63,6 +63,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
 	static TArray<FUpStageCameraCut> StitchCameraCuts(const TArray<FUpStageCameraCut>& CameraCuts, const FIntPoint& FrameBounds, const FUpStageSequencerCameraCutsParameter& Parameter);
 
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
+	static float CalculateKeyMomentFocusDistance(ACineCameraActor* Camera, const FUpStageKeyMomentEvaluation& KeyMoment);
+
 private:
 	static FUpStageLabanEffortActionDimension GetEffortDimensions(EUpStageLabanEffortAction Action);
 	static EUpStageLabanEffortAction GetEffortAction(FUpStageLabanEffortActionDimension Dimension);

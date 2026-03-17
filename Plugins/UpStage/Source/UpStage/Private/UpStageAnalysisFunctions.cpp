@@ -212,7 +212,6 @@ ACineCameraActor* UUpStageAnalysisFunctions::SelectBestCameraForKeyMoment(const 
 {
 	if (KeyMoment.FocalStructures.IsEmpty() || CameraArray.IsEmpty()) return nullptr;
 
-	UE_LOG(LogTemp, Log, TEXT("Frame Index: %d, Actors: %d"), KeyMoment.FrameIndex, KeyMoment.FocalStructures.Num());
 	TMap<ACineCameraActor*, float> CameraScores;
 
 	FVector PerformerSumLocation = FVector::ZeroVector;
@@ -234,7 +233,6 @@ ACineCameraActor* UUpStageAnalysisFunctions::SelectBestCameraForKeyMoment(const 
 		float CompositionScore = CalculateCompositionScore(Camera, KeyMoment.FocalStructures, Parameter.CameraSelectionParameter);
 		float TotalScore = AlignmentScore + VisibilityScore + CompositionScore;
 
-		UE_LOG(LogTemp, Log, TEXT("Camera: %s, Alignment: %.2f, Visibility: %.2f, Composition: %.2f, Total: %.2f"), *Camera->GetName(), AlignmentScore, VisibilityScore, CompositionScore, TotalScore);
 		CameraScores.Add(Camera, TotalScore);
 	}
 
@@ -312,6 +310,7 @@ float UUpStageAnalysisFunctions::CalculateCompositionScore(ACineCameraActor* Cam
 	FTransform CameraTransform = Camera->GetActorTransform();
 	float FOV = CameraComp->FieldOfView;
 	float AspectRatio = CameraComp->AspectRatio;
+	UE_LOG(LogTemp, Warning, TEXT("Actor: %s, Camera FOV: %f, Aspect Ratio: %f"), *Camera->GetName(), FOV, AspectRatio);
 
 	float TanHalfFOV = FMath::Tan(FMath::DegreesToRadians(FOV * 0.5f));
 	float TotalCompositionScore = 0.f;
@@ -624,4 +623,34 @@ TArray<FUpStageCameraCut> UUpStageAnalysisFunctions::FillCameraCutWithNeighbor(
 		}
 	}
 	return StitchedCuts;
+}
+
+float UUpStageAnalysisFunctions::CalculateKeyMomentFocusDistance(ACineCameraActor* Camera, const FUpStageKeyMomentEvaluation& KeyMoment)
+{
+	if (!Camera || KeyMoment.FocalStructures.IsEmpty()) return 0.f;
+
+	FVector CameraLocation = Camera->GetActorLocation();
+	FVector CameraForward = Camera->GetActorForwardVector();
+
+	float MinDepth = TNumericLimits<float>::Max();
+	float MaxDepth = -TNumericLimits<float>::Max();
+	bool bFoundValidTarget = false;
+
+	for (const FUpStagePerformerFocalStructure& FocalStruct : KeyMoment.FocalStructures)
+	{
+		FVector TargetLocation = FocalStruct.MainFocalTransform.GetLocation();
+		FVector DirToTarget = TargetLocation - CameraLocation;
+
+		float ProjectedDepth = FVector::DotProduct(DirToTarget, CameraForward);
+
+		if (ProjectedDepth > 0.f)
+		{
+			if (ProjectedDepth < MinDepth) MinDepth = ProjectedDepth;
+			if (ProjectedDepth > MaxDepth) MaxDepth = ProjectedDepth;
+			bFoundValidTarget = true;
+		}
+	}
+
+	if (!bFoundValidTarget) return 0.f;
+	return (MinDepth + MaxDepth) * 0.5f;
 }

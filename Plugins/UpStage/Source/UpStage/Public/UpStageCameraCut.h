@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "CineCameraActor.h"
+#include "UpStageCameraCutSpecification.h"
 #include "UpStageCameraCut.generated.h"
 
 
@@ -22,4 +23,7 @@ struct UPSTAGE_API FUpStageCameraCut
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Frame")
 	int32 FrameEnd = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Specification")
+	FUpStageCameraCutSpecification CameraSpecification;
 };
