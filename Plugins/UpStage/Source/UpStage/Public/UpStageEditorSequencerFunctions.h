@@ -26,4 +26,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Sequencer")
 	static void AddFocusDistanceKeyframe(ULevelSequence* InSequence, FMovieSceneObjectBindingID CameraObjectBindingID, int32 FrameIndex, float FocusDistance);
 	
+	UFUNCTION(BlueprintCallable, Category = "UpStage|Sequencer")
+	static void DeleteAllFocusDistanceKeyframes(ULevelSequence* InSequence, const TArray<FMovieSceneObjectBindingID>& CameraObjectBindings);
 };
