@@ -26,4 +26,7 @@ struct UPSTAGE_API FUpStageCameraGenerationParameter
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation")
 	ACineCameraActor* FallbackCamera;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generation|Keyframes")
+	bool bGenerateFocusDistanceKeyframes = true;
 };

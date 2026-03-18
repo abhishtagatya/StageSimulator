@@ -63,6 +63,7 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 			{
 				FUpStageKeyMomentEvaluation& ExistingEvaluation = KeyMomentEvaluations.FindOrAdd(FrameIndex);
 				ExistingEvaluation.FrameIndex = FrameIndex;
+				ExistingEvaluation.bIsManualOverride = bIsManual;
 
 				if (FrameScore > Parameter.MinPerformerScore)
 				{
@@ -78,10 +79,20 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 	return KeyMomentsArray;
 }
 
-TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMomentsFromSelectedFrames(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& Frames)
+TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMomentsFromSelectedFrames(
+	const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, 
+	const FUpStageSequencerKeyMomentParameter& Parameter, 
+	const TArray<int32>& Frames)
 {
 	TMap<int32, FUpStageKeyMomentEvaluation> KeyMomentEvaluations;
 	TArray<FUpStageKeyMomentEvaluation> KeyMomentsArray;
+
+	for (int32 FrameIndex : Frames)
+	{
+		FUpStageKeyMomentEvaluation& Eval = KeyMomentEvaluations.FindOrAdd(FrameIndex);
+		Eval.FrameIndex = FrameIndex;
+		Eval.KeyMomentScore = 0.0f;
+	}
 
 	for (const TPair<AActor*, FUpStageSequencerMovementAnalysis>& Pair : PerformerFrameActions)
 	{
@@ -129,7 +140,7 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 					Parameter.ExtremityAnalysisParameter);
 			}
 
-			if (Frames.Contains(FrameIndex) && FrameScore > Parameter.MinPerformerScore)
+			if (Frames.Contains(FrameIndex))
 			{
 				FUpStageKeyMomentEvaluation& ExistingEvaluation = KeyMomentEvaluations.FindOrAdd(FrameIndex);
 				ExistingEvaluation.FrameIndex = FrameIndex;
@@ -139,6 +150,24 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 					ExistingEvaluation.KeyMomentScore += FrameScore;
 					ExistingEvaluation.Actors.Add(Actor);
 					ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
+				}
+			}
+		}
+	}
+
+	// Ensure that manually selected frames have associated actors and focal structures, even if their score is low
+	for (auto& It : KeyMomentEvaluations)
+	{
+		FUpStageKeyMomentEvaluation& Eval = It.Value;
+
+		if (Eval.Actors.Num() == 0)
+		{
+			for (const TPair<AActor*, FUpStageSequencerMovementAnalysis>& Pair : PerformerFrameActions)
+			{
+				if (Pair.Key && Pair.Value.FrameFocalStructures.IsValidIndex(Eval.FrameIndex))
+				{
+					Eval.Actors.Add(Pair.Key);
+					Eval.FocalStructures.Add(Pair.Value.FrameFocalStructures[Eval.FrameIndex]);
 				}
 			}
 		}
@@ -310,7 +339,6 @@ float UUpStageAnalysisFunctions::CalculateCompositionScore(ACineCameraActor* Cam
 	FTransform CameraTransform = Camera->GetActorTransform();
 	float FOV = CameraComp->FieldOfView;
 	float AspectRatio = CameraComp->AspectRatio;
-	UE_LOG(LogTemp, Warning, TEXT("Actor: %s, Camera FOV: %f, Aspect Ratio: %f"), *Camera->GetName(), FOV, AspectRatio);
 
 	float TanHalfFOV = FMath::Tan(FMath::DegreesToRadians(FOV * 0.5f));
 	float TotalCompositionScore = 0.f;

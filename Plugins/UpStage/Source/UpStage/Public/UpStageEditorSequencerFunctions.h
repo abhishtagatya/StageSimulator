@@ -24,8 +24,8 @@ class UPSTAGE_API UUpStageEditorSequencerFunctions : public UBlueprintFunctionLi
 public:
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Sequencer")
-	static void AddFocusDistanceKeyframe(ULevelSequence* InSequence, FMovieSceneObjectBindingID CameraObjectBindingID, int32 FrameIndex, float FocusDistance);
-	
+	static void AddKeyframeToFloatProperty(ULevelSequence* InSequence, FMovieSceneObjectBindingID ObjectBindingID, FName PropertyName, FString PropertyPath, int32 FrameIndex, float Value);
+
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Sequencer")
-	static void DeleteAllFocusDistanceKeyframes(ULevelSequence* InSequence, const TArray<FMovieSceneObjectBindingID>& CameraObjectBindings);
+	static void DeleteKeyframesFromFloatProperty(ULevelSequence* InSequence, FMovieSceneObjectBindingID ObjectBindings, FName PropertyName, FString PropertyPath);
 };

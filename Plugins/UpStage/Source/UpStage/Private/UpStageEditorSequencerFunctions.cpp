@@ -3,101 +3,83 @@
 
 #include "UpStageEditorSequencerFunctions.h"
 
-void UUpStageEditorSequencerFunctions::AddFocusDistanceKeyframe(ULevelSequence* InSequence, FMovieSceneObjectBindingID CameraObjectBindingID, int32 FrameIndex, float FocusDistance)
+void UUpStageEditorSequencerFunctions::AddKeyframeToFloatProperty(ULevelSequence* InSequence, FMovieSceneObjectBindingID ObjectBindingID, FName PropertyName, FString PropertyPath, int32 FrameIndex, float Value)
 {
-    FGuid CameraBindingID = CameraObjectBindingID.GetGuid();
-    if (!InSequence || !CameraBindingID.IsValid()) return;
+	FGuid BindingID = ObjectBindingID.GetGuid();
+	if (!InSequence || !BindingID.IsValid()) return;
 
-    UMovieScene* MovieScene = InSequence->GetMovieScene();
-    if (!MovieScene) return;
+	UMovieScene* MovieScene = InSequence->GetMovieScene();
+	if (!MovieScene) return;
 
-    FFrameRate DisplayRate = MovieScene->GetDisplayRate();
-    FFrameRate TickResolution = MovieScene->GetTickResolution();
+	FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+	FFrameRate TickResolution = MovieScene->GetTickResolution();
 
-    FFrameTime TickTime = ConvertFrameTime(FFrameTime(FrameIndex), DisplayRate, TickResolution);
-    FFrameNumber KeyTime = TickTime.FloorToFrame();
+	FFrameTime TickTime = ConvertFrameTime(FFrameTime(FrameIndex), DisplayRate, TickResolution);
+	FFrameNumber KeyTime = TickTime.FloorToFrame();
 
-    FName PropertyName("Manual Focus Distance");
-    FString PropertyPath("FocusSettings.ManualFocusDistance");
-
-    UMovieSceneFloatTrack* FocusTrack = nullptr;
-
-    for (UMovieSceneTrack* Track : MovieScene->FindTracks(UMovieSceneFloatTrack::StaticClass(), CameraBindingID))
+	UMovieSceneFloatTrack* FloatTrack = nullptr;
+    for (UMovieSceneTrack* Track : MovieScene->FindTracks(UMovieSceneFloatTrack::StaticClass(), BindingID))
     {
         UMovieSceneFloatTrack* PropTrack = Cast<UMovieSceneFloatTrack>(Track);
         if (PropTrack && PropTrack->GetPropertyPath() == PropertyPath)
         {
-            FocusTrack = PropTrack;
+            FloatTrack = PropTrack;
             break;
         }
-    }
+	}
 
-    if (!FocusTrack)
+    if (!FloatTrack)
     {
-        FocusTrack = MovieScene->AddTrack<UMovieSceneFloatTrack>(CameraBindingID);
-        FocusTrack->SetPropertyNameAndPath(PropertyName, PropertyPath);
-    }
+        FloatTrack = MovieScene->AddTrack<UMovieSceneFloatTrack>(BindingID);
+        FloatTrack->SetPropertyNameAndPath(PropertyName, PropertyPath);
+	}
 
-    UMovieSceneFloatSection* FocusSection = nullptr;
-    if (FocusTrack->GetAllSections().Num() > 0)
+    UMovieSceneFloatSection* FloatSection = nullptr;
+    if (FloatTrack->GetAllSections().Num() > 0)
     {
-        FocusSection = Cast<UMovieSceneFloatSection>(FocusTrack->GetAllSections()[0]);
+        FloatSection = Cast<UMovieSceneFloatSection>(FloatTrack->GetAllSections()[0]);
     }
     else
     {
-        FocusSection = Cast<UMovieSceneFloatSection>(FocusTrack->CreateNewSection());
-        FocusTrack->AddSection(*FocusSection);
+        FloatSection = Cast<UMovieSceneFloatSection>(FloatTrack->CreateNewSection());
+        FloatTrack->AddSection(*FloatSection);
+        FloatSection->SetRange(TRange<FFrameNumber>::All());
+	}
 
-        FocusSection->SetRange(TRange<FFrameNumber>::All());
-    }
-
-    FMovieSceneChannelProxy& ChannelProxy = FocusSection->GetChannelProxy();
+    FMovieSceneChannelProxy& ChannelProxy = FloatSection->GetChannelProxy();
     TArrayView<FMovieSceneFloatChannel*> FloatChannels = ChannelProxy.GetChannels<FMovieSceneFloatChannel>();
-
     if (FloatChannels.IsValidIndex(0))
     {
         FMovieSceneFloatChannel* Channel = FloatChannels[0];
-
-        Channel->GetData().AddKey(KeyTime.Value, FMovieSceneFloatValue(FocusDistance));
+        Channel->GetData().AddKey(KeyTime.Value, FMovieSceneFloatValue(Value));
         Channel->AutoSetTangents();
-    }
+	}
 
-    InSequence->MarkPackageDirty();
+	InSequence->MarkPackageDirty();
 }
 
-void UUpStageEditorSequencerFunctions::DeleteAllFocusDistanceKeyframes(ULevelSequence* InSequence, const TArray<FMovieSceneObjectBindingID>& CameraObjectBindings)
+void UUpStageEditorSequencerFunctions::DeleteKeyframesFromFloatProperty(ULevelSequence* InSequence, FMovieSceneObjectBindingID ObjectBindingID, FName PropertyName, FString PropertyPath)
 {
-    if (!InSequence) return;
+    FGuid BindingID = ObjectBindingID.GetGuid();
+    if (!InSequence || !BindingID.IsValid()) return;
 
     UMovieScene* MovieScene = InSequence->GetMovieScene();
     if (!MovieScene) return;
 
-    bool bSequenceWasModified = false;
-    FString PropertyPath("FocusSettings.ManualFocusDistance");
+    UMovieSceneTrack* TrackToRemove = nullptr;
 
-    for (const FMovieSceneObjectBindingID& Binding : CameraObjectBindings)
+    for (UMovieSceneTrack* Track : MovieScene->FindTracks(UMovieSceneFloatTrack::StaticClass(), BindingID))
     {
-        FGuid ComponentBindingID = Binding.GetGuid();
-        if (!ComponentBindingID.IsValid()) continue;
-
-        UMovieSceneTrack* TrackToRemove = nullptr;
-
-        for (UMovieSceneTrack* Track : MovieScene->FindTracks(UMovieSceneFloatTrack::StaticClass(), ComponentBindingID))
+        UMovieSceneFloatTrack* PropTrack = Cast<UMovieSceneFloatTrack>(Track);
+        if (PropTrack && PropTrack->GetPropertyPath() == PropertyPath)
         {
-            UMovieSceneFloatTrack* PropTrack = Cast<UMovieSceneFloatTrack>(Track);
-            if (PropTrack && PropTrack->GetPropertyPath() == PropertyPath)
-            {
-                TrackToRemove = PropTrack;
-                break;
-            }
-        }
-
-        if (TrackToRemove)
-        {
-            MovieScene->RemoveTrack(*TrackToRemove);
-            bSequenceWasModified = true;
+            TrackToRemove = PropTrack;
+            break;
         }
     }
-
-    if (bSequenceWasModified) InSequence->MarkPackageDirty();
+    if (TrackToRemove)
+    {
+        MovieScene->RemoveTrack(*TrackToRemove);
+        InSequence->MarkPackageDirty();
+    }
 }
