@@ -35,7 +35,8 @@ public class UpStage : ModuleRules
                 "ConsoleVariablesEditorRuntime",
                 "LevelSequence",
                 "MovieScene",
-                "MovieSceneTracks"
+                "MovieSceneTracks",
+                "SequencerScripting"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

@@ -38,4 +38,7 @@ struct UPSTAGE_API FUpStageSequencerKeyMomentParameter
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Extremities")
 	FUpStageExtremityAnalysisParameter ExtremityAnalysisParameter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Analysis|Generation")
+	bool bHighlightByColor = true;
 };

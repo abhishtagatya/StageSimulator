@@ -83,3 +83,30 @@ void UUpStageEditorSequencerFunctions::DeleteKeyframesFromFloatProperty(ULevelSe
         InSequence->MarkPackageDirty();
     }
 }
+
+int32 UUpStageEditorSequencerFunctions::AddCustomColoredMarkedFrame(UMovieSceneSequence* InSequence, const FMovieSceneMarkedFrame& InMarkedFrame, FColor MarkColor, EMovieSceneTimeUnit TimeUnit)
+{
+    if (!InSequence) return INDEX_NONE;
+
+    UMovieScene* MovieScene = InSequence->GetMovieScene();
+    if (!MovieScene) return INDEX_NONE;
+
+    FMovieSceneMarkedFrame NewMarkedFrame = InMarkedFrame;
+    NewMarkedFrame.bUseCustomColor = true;
+    NewMarkedFrame.CustomColor = MarkColor;
+
+    if (TimeUnit == EMovieSceneTimeUnit::DisplayRate)
+    {
+        FFrameRate DisplayRate = MovieScene->GetDisplayRate();
+        FFrameRate TickResolution = MovieScene->GetTickResolution();
+
+        FFrameTime InternalTime = FFrameRate::TransformTime(FFrameTime(NewMarkedFrame.FrameNumber), DisplayRate, TickResolution);
+        NewMarkedFrame.FrameNumber = InternalTime.FrameNumber;
+    }
+
+    int32 NewIndex = MovieScene->AddMarkedFrame(NewMarkedFrame);
+
+    InSequence->MarkPackageDirty();
+
+    return NewIndex;
+}
