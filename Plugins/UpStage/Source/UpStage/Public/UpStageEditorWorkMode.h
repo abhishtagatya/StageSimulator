@@ -11,5 +11,5 @@ enum class EUpStageEditorWorkMode : uint8
 	KeyMomentSelection UMETA(DisplayName = "Key Moment Selection"),
 	CameraSelection UMETA(DisplayName = "Camera Selection"),
 	QueueRenders UMETA(DisplayName = "Queue Renders"),
-	Cancel UMETA(DisplayName = "Cancel")
+	Cancel UMETA(DisplayName = "Cancel") 
 };

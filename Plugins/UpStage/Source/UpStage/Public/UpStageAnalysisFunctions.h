@@ -28,10 +28,10 @@ class UPSTAGE_API UUpStageAnalysisFunctions : public UBlueprintFunctionLibrary
 	
 public:
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis", meta = (AutoCreateRefTerm = "ManualFrames"))
-	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMoments(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& ManualFrames);
+	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMoments(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& ManualFrames, const FIntPoint& PlaybackBounds);
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Analysis")
-	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMomentsFromSelectedFrames(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& Frames);
+	static TArray<FUpStageKeyMomentEvaluation> ExtractKeyMomentsFromSelectedFrames(const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, const FUpStageSequencerKeyMomentParameter& Parameter, const TArray<int32>& Frames, const FIntPoint& PlaybackBounds);
 
 	UFUNCTION(BlueprintCallable, Category = "UpStage|Selection")
 	static TArray<FUpStageKeyMomentEvaluation> SelectKeyMoments(const TArray<FUpStageKeyMomentEvaluation>& KeyMomentEvaluations, const FUpStageSequencerKeyMomentParameter& Parameter);

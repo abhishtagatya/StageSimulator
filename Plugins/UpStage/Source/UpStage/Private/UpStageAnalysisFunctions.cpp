@@ -7,10 +7,13 @@
 TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments(
 	const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, 
 	const FUpStageSequencerKeyMomentParameter& Parameter,
-	const TArray<int32>& ManualFrames)
+	const TArray<int32>& ManualFrames,
+	const FIntPoint& PlaybackBounds)
 {
 	TMap<int32, FUpStageKeyMomentEvaluation> KeyMomentEvaluations;
 	TArray<FUpStageKeyMomentEvaluation> KeyMomentsArray;
+
+	TSet<int32> ManualFramesSet(ManualFrames);
 
 	for (const TPair<AActor*, FUpStageSequencerMovementAnalysis>& Pair : PerformerFrameActions)
 	{
@@ -18,6 +21,7 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 		const FUpStageSequencerMovementAnalysis& MovementAnalysis = Pair.Value;
 
 		if (!Actor) continue;
+		if ((MovementAnalysis.FrameMovementAnalyses.IsEmpty())) continue;
 
 		EUpStageLabanEffortAction PrevEffortAction = Parameter.ActionTransitionAnalysisParameter.BaseEffortAction;
 		FUpStageLabanEffortExtremities PrevExtremity;
@@ -25,19 +29,19 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 		PrevExtremity.WeightExtremity.MinValue = PrevExtremity.WeightExtremity.MaxValue = MovementAnalysis.FrameMovementAnalyses[0].EffortWeight;
 		PrevExtremity.TimeExtremity.MinValue = PrevExtremity.TimeExtremity.MaxValue = MovementAnalysis.FrameMovementAnalyses[0].EffortTime;
 
-		int32 TotalFrames = MovementAnalysis.FrameMovementAnalyses.Num();
-		for (int FrameIndex = 0; FrameIndex < TotalFrames; ++FrameIndex)
+		for (int FrameIndex = PlaybackBounds.X; FrameIndex <= PlaybackBounds.Y; ++FrameIndex)
 		{
-			if (FrameIndex <= Parameter.FramePadding || FrameIndex >= TotalFrames - Parameter.FramePadding) continue;
+			if (FrameIndex <= PlaybackBounds.X + Parameter.FramePadding || FrameIndex >= PlaybackBounds.Y - Parameter.FramePadding) continue;
 
-			float FrameScore = CalculateEffortIntensity(MovementAnalysis.FrameMovementAnalyses[FrameIndex]);
-			bool bIsManual = ManualFrames.Contains(FrameIndex);
+			int32 ArrayIndex = FrameIndex - PlaybackBounds.X;
+			float FrameScore = CalculateEffortIntensity(MovementAnalysis.FrameMovementAnalyses[ArrayIndex]);
+			bool bIsManual = ManualFramesSet.Contains(FrameIndex);
 
 			if (Parameter.bAnalyzeActionTransition)
 			{
 				EUpStageLabanEffortAction CurrentEffortAction = TransitionEffortAction(
 					PrevEffortAction,
-					MovementAnalysis.FrameMovementAnalyses[FrameIndex], 
+					MovementAnalysis.FrameMovementAnalyses[ArrayIndex],
 					Parameter.ActionTransitionAnalysisParameter.ActionTransitionThreshold);
 
 				if (CurrentEffortAction != PrevEffortAction)
@@ -54,7 +58,7 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 			if (Parameter.bAnalyzeExtremities)
 			{
 				FrameScore += CalculateEffortExtremityScore(
-					MovementAnalysis.FrameMovementAnalyses[FrameIndex], 
+					MovementAnalysis.FrameMovementAnalyses[ArrayIndex],
 					PrevExtremity,
 					Parameter.ExtremityAnalysisParameter);
 			}
@@ -69,11 +73,11 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 				{
 					ExistingEvaluation.KeyMomentScore += FrameScore;
 					ExistingEvaluation.Actors.Add(Actor);
-					ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
+					ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[ArrayIndex]);
 				}
 			}
 		}
-	}
+	}	
 
 	KeyMomentEvaluations.GenerateValueArray(KeyMomentsArray);
 	return KeyMomentsArray;
@@ -82,16 +86,19 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMomentsFromSelectedFrames(
 	const TMap<AActor*, FUpStageSequencerMovementAnalysis>& PerformerFrameActions, 
 	const FUpStageSequencerKeyMomentParameter& Parameter, 
-	const TArray<int32>& Frames)
+	const TArray<int32>& Frames,
+	const FIntPoint& PlaybackBounds)
 {
 	TMap<int32, FUpStageKeyMomentEvaluation> KeyMomentEvaluations;
 	TArray<FUpStageKeyMomentEvaluation> KeyMomentsArray;
+	TSet<int32> FrameSet(Frames);
 
 	for (int32 FrameIndex : Frames)
 	{
 		FUpStageKeyMomentEvaluation& Eval = KeyMomentEvaluations.FindOrAdd(FrameIndex);
 		Eval.FrameIndex = FrameIndex;
 		Eval.KeyMomentScore = 0.0f;
+		Eval.bIsManualOverride = true;
 	}
 
 	for (const TPair<AActor*, FUpStageSequencerMovementAnalysis>& Pair : PerformerFrameActions)
@@ -100,6 +107,7 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 		const FUpStageSequencerMovementAnalysis& MovementAnalysis = Pair.Value;
 
 		if (!Actor) continue;
+		if ((MovementAnalysis.FrameMovementAnalyses.IsEmpty())) continue;
 
 		EUpStageLabanEffortAction PrevEffortAction = Parameter.ActionTransitionAnalysisParameter.BaseEffortAction;
 		FUpStageLabanEffortExtremities PrevExtremity;
@@ -107,18 +115,16 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 		PrevExtremity.WeightExtremity.MinValue = PrevExtremity.WeightExtremity.MaxValue = MovementAnalysis.FrameMovementAnalyses[0].EffortWeight;
 		PrevExtremity.TimeExtremity.MinValue = PrevExtremity.TimeExtremity.MaxValue = MovementAnalysis.FrameMovementAnalyses[0].EffortTime;
 
-		int32 TotalFrames = MovementAnalysis.FrameMovementAnalyses.Num();
-		for (int FrameIndex = 0; FrameIndex < TotalFrames; ++FrameIndex)
+		for (int FrameIndex = PlaybackBounds.X; FrameIndex <= PlaybackBounds.Y; ++FrameIndex)
 		{
-			if (FrameIndex <= Parameter.FramePadding || FrameIndex >= TotalFrames - Parameter.FramePadding) continue;
-
-			float FrameScore = CalculateEffortIntensity(MovementAnalysis.FrameMovementAnalyses[FrameIndex]);
+			int32 ArrayIndex = FrameIndex - PlaybackBounds.X;
+			float FrameScore = CalculateEffortIntensity(MovementAnalysis.FrameMovementAnalyses[ArrayIndex]);
 
 			if (Parameter.bAnalyzeActionTransition)
 			{
 				EUpStageLabanEffortAction CurrentEffortAction = TransitionEffortAction(
 					PrevEffortAction,
-					MovementAnalysis.FrameMovementAnalyses[FrameIndex],
+					MovementAnalysis.FrameMovementAnalyses[ArrayIndex],
 					Parameter.ActionTransitionAnalysisParameter.ActionTransitionThreshold);
 
 				if (CurrentEffortAction != PrevEffortAction)
@@ -135,12 +141,12 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 			if (Parameter.bAnalyzeExtremities)
 			{
 				FrameScore += CalculateEffortExtremityScore(
-					MovementAnalysis.FrameMovementAnalyses[FrameIndex],
+					MovementAnalysis.FrameMovementAnalyses[ArrayIndex],
 					PrevExtremity,
 					Parameter.ExtremityAnalysisParameter);
 			}
 
-			if (Frames.Contains(FrameIndex))
+			if (FrameSet.Contains(FrameIndex))
 			{
 				FUpStageKeyMomentEvaluation& ExistingEvaluation = KeyMomentEvaluations.FindOrAdd(FrameIndex);
 				ExistingEvaluation.FrameIndex = FrameIndex;
@@ -149,7 +155,7 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 				{
 					ExistingEvaluation.KeyMomentScore += FrameScore;
 					ExistingEvaluation.Actors.Add(Actor);
-					ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[FrameIndex]);
+					ExistingEvaluation.FocalStructures.Add(MovementAnalysis.FrameFocalStructures[ArrayIndex]);
 				}
 			}
 		}
@@ -164,11 +170,22 @@ TArray<FUpStageKeyMomentEvaluation> UUpStageAnalysisFunctions::ExtractKeyMoments
 		{
 			for (const TPair<AActor*, FUpStageSequencerMovementAnalysis>& Pair : PerformerFrameActions)
 			{
-				if (Pair.Key && Pair.Value.FrameFocalStructures.IsValidIndex(Eval.FrameIndex))
+				AActor* Actor = Pair.Key;
+				const FUpStageSequencerMovementAnalysis& MovementAnalysis = Pair.Value;
+
+				int32 ArrayIndex = Eval.FrameIndex - PlaybackBounds.X;
+
+				if (Pair.Key && Pair.Value.FrameFocalStructures.IsValidIndex(ArrayIndex))
 				{
 					Eval.Actors.Add(Pair.Key);
-					Eval.FocalStructures.Add(Pair.Value.FrameFocalStructures[Eval.FrameIndex]);
+					Eval.FocalStructures.Add(Pair.Value.FrameFocalStructures[ArrayIndex]);
+					UE_LOG(LogTemp, Warning, TEXT("Manually selected frame %d had no actors with score above threshold. Added actor %s for visibility."), Eval.FrameIndex, *Pair.Key->GetName());
 				}
+			}
+
+			if (Eval.Actors.Num() == 0)
+			{
+				UE_LOG(LogTemp, Error, TEXT("CRITICAL: Frame %d finished fallback loop but still has 0 actors! It will be exported empty."), Eval.FrameIndex);
 			}
 		}
 	}
